@@ -110,21 +110,31 @@ const ThreeDimensionalAvatar: React.FC<ThreeDimensionalAvatarProps> = ({
             videoRef.current.srcObject = videoStream;
           }
 
-          // Initialize Face Mesh
-          faceMesh = new FaceMesh({
-            locateFile: (file) => {
-              return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-            }
-          });
+          // Initialize Face Mesh - using conditional import to avoid run-time errors
+          try {
+            // Using dynamic import to avoid TypeScript issues
+            // In a production app, would use proper import
+            const { FaceMesh } = await import('@mediapipe/face_mesh');
+            faceMesh = new FaceMesh({
+              locateFile: (fileName: string) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${fileName}`;
+              }
+            });
+          } catch (error) {
+            console.error("Failed to load FaceMesh:", error);
+          }
 
-          faceMesh.setOptions({
-            maxNumFaces: 1,
-            refineLandmarks: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-          });
+          // Only set options if faceMesh was successfully initialized
+          if (faceMesh) {
+            faceMesh.setOptions({
+              maxNumFaces: 1,
+              refineLandmarks: true,
+              minDetectionConfidence: 0.5,
+              minTrackingConfidence: 0.5
+            });
 
-          faceMesh.onResults(onResults);
+            faceMesh.onResults(onResults);
+          }
 
           // Start detection loop
           if (videoRef.current) {
