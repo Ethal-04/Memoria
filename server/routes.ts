@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { nanoid } from "nanoid";
-import { insertCompanionSchema, insertConversationSchema, type Message } from "@shared/schema";
+import { insertCompanionSchema, insertConversationSchema, type Message, type Conversation } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 
@@ -155,7 +155,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       };
       
-      const newMessages = [...conversation.messages, userMessage];
+      // Ensure conversation.messages is an array
+      const existingMessages = conversation.messages || [];
+      const newMessages = [...existingMessages, userMessage];
       
       let aiResponse = "";
       
@@ -184,21 +186,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           aiResponse = completion.choices[0].message.content || "I'm not sure how to respond to that.";
         } else {
           // Use our local AI response generator (no API needed)
-          aiResponse = generateLocalResponse(
-            message, 
-            companion.personality as any || 'balanced',
-            companion.name
-          );
+          // Get recent messages for context
+          const recentMessages = existingMessages.slice(-6).map((m: Message) => m.content).join('\n');
+          
+          aiResponse = generateLocalResponse({
+            name: companion.name,
+            description: companion.description || '',
+            personality: companion.personality || 'balanced',
+            history: recentMessages,
+            lastMessage: message
+          });
         }
       } catch (apiError) {
         console.error("AI response error:", apiError);
         
         // Use our local AI response generator as fallback
-        aiResponse = generateLocalResponse(
-          message, 
-          companion.personality as any || 'balanced',
-          companion.name
-        );
+        // Get recent messages for context
+        const recentMessages = existingMessages.slice(-6).map((m: Message) => m.content).join('\n');
+        
+        aiResponse = generateLocalResponse({
+          name: companion.name,
+          description: companion.description || '',
+          personality: companion.personality || 'balanced',
+          history: recentMessages,
+          lastMessage: message
+        });
       }
       
       const assistantMessage: Message = {

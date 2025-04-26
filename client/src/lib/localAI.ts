@@ -254,18 +254,23 @@ function analyzeSentiment(message: string): 'positive' | 'negative' | 'neutral' 
 
 // Main function to generate a response
 export function generateLocalResponse(
-  message: string,
-  personality: keyof typeof personalityTemplates = 'balanced',
-  companionName: string = 'Companion'
+  context: {
+    name: string;             // Companion name
+    description?: string;     // Companion description
+    personality?: string;     // Companion personality trait
+    history?: string;         // Previous conversation history
+    lastMessage: string;      // Current user message
+  }
 ): string {
+  // Use the appropriate personality template
+  const personalityType = (context.personality?.toLowerCase() || '') as keyof typeof personalityTemplates;
+  const personality = personalityTemplates[personalityType] || personalityTemplates.balanced;
+  
   // Detect the conversation theme
-  const theme = detectTheme(message);
+  const theme = detectTheme(context.lastMessage);
   
   // Analyze sentiment
-  const sentiment = analyzeSentiment(message);
-  
-  // Select responses based on personality
-  const personalityProfile = personalityTemplates[personality] || personalityTemplates.balanced;
+  const sentiment = analyzeSentiment(context.lastMessage);
   
   // Get theme-specific prompts
   const themePrompts = conversationContexts[theme].prompts;
@@ -277,19 +282,52 @@ export function generateLocalResponse(
   responsePool = responsePool.concat(themePrompts);
   
   // Add personality-specific responses
-  responsePool = responsePool.concat(personalityProfile.responses);
+  responsePool = responsePool.concat(personality.responses);
   
-  // Add a question from the personality profile (30% chance)
-  const shouldAskQuestion = Math.random() < 0.3;
+  // Incorporate personalization into responses by replacing placeholders
+  responsePool = responsePool.map(response => {
+    return response
+      .replace(/\{name\}/g, context.name || 'Companion')
+      .replace(/\{topic\}/g, context.lastMessage.substring(0, 20) + "...");
+  });
   
-  // Select a random response
-  const randomIndex = Math.floor(Math.random() * responsePool.length);
-  let response = responsePool[randomIndex];
+  // Determine if we should ask a question (higher chance if user's message was short)
+  const shouldAskQuestion = Math.random() < (context.lastMessage.length < 20 ? 0.7 : 0.3);
+  
+  // Select a response that most closely relates to the user's message
+  let bestResponseScore = 0;
+  let bestResponse = responsePool[Math.floor(Math.random() * responsePool.length)];
+  
+  // Very basic relevance matching - look for word overlap
+  const userWords = context.lastMessage.toLowerCase().split(/\W+/).filter(w => w.length > 3);
+  
+  for (const response of responsePool) {
+    const responseWords = response.toLowerCase().split(/\W+/);
+    const matchScore = userWords.filter(word => responseWords.some(rWord => rWord.includes(word))).length;
+    
+    if (matchScore > bestResponseScore) {
+      bestResponseScore = matchScore;
+      bestResponse = response;
+    }
+  }
+  
+  // Use the best response, or if no good match, use a random one
+  let response = bestResponseScore > 0 ? bestResponse : responsePool[Math.floor(Math.random() * responsePool.length)];
   
   // Add a question if determined
   if (shouldAskQuestion) {
-    const questionIndex = Math.floor(Math.random() * personalityProfile.questions.length);
-    response += " " + personalityProfile.questions[questionIndex];
+    const questions = personality.questions;
+    const questionIndex = Math.floor(Math.random() * questions.length);
+    response += " " + questions[questionIndex];
+  }
+  
+  // Personalize with companion name
+  if (!response.includes(context.name) && Math.random() < 0.3) {
+    if (Math.random() < 0.5) {
+      response = context.name + ', ' + response.charAt(0).toLowerCase() + response.slice(1);
+    } else {
+      response += ` I'm here for you, ${context.name}.`;
+    }
   }
   
   return response;
