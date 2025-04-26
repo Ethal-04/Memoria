@@ -29,21 +29,56 @@ function Head({ url, expressions }: AvatarProps) {
   const mesh = useRef<THREE.Mesh>(null);
   const texture = useTexture(url);
   
-  // Use expressions to modify the avatar mesh
-  useFrame(() => {
+  // Create morphs for expressions
+  const morphTargets = useRef({
+    smile: 0,
+    sadness: 0,
+    surprise: 0,
+    talking: 0
+  });
+  
+  // Smooth animation of expressions
+  useFrame((state) => {
     if (mesh.current) {
-      // Simple implementation of expressions - in a production app, would use more detailed morphs
-      if (expressions.smile > 0) {
-        mesh.current.morphTargetInfluences![0] = expressions.smile;
+      // Gradually change morph targets for smooth transitions
+      morphTargets.current.smile = THREE.MathUtils.lerp(
+        morphTargets.current.smile, 
+        expressions.smile, 
+        0.1
+      );
+      
+      morphTargets.current.sadness = THREE.MathUtils.lerp(
+        morphTargets.current.sadness, 
+        expressions.sadness, 
+        0.1
+      );
+      
+      morphTargets.current.surprise = THREE.MathUtils.lerp(
+        morphTargets.current.surprise, 
+        expressions.surprise, 
+        0.1
+      );
+      
+      // Apply the current morph target values
+      if (mesh.current.morphTargetInfluences) {
+        mesh.current.morphTargetInfluences[0] = morphTargets.current.smile;
+        mesh.current.morphTargetInfluences[1] = morphTargets.current.sadness;
+        mesh.current.morphTargetInfluences[2] = morphTargets.current.surprise;
       }
-      if (expressions.sadness > 0) {
-        mesh.current.morphTargetInfluences![1] = expressions.sadness;
-      }
-      if (expressions.surprise > 0) {
-        mesh.current.morphTargetInfluences![2] = expressions.surprise;
-      }
+      
+      // Handle talking animation
       if (expressions.talking > 0) {
-        mesh.current.rotation.y = Math.sin(Date.now() * 0.003) * 0.1;
+        // Gentle head movement
+        mesh.current.rotation.y = Math.sin(state.clock.elapsedTime * 3) * 0.05;
+        
+        // Subtle bobbing motion when talking
+        mesh.current.position.y = Math.sin(state.clock.elapsedTime * 5) * 0.02;
+      } else {
+        // Slow breathing motion when not talking
+        mesh.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.01;
+        
+        // Very subtle side-to-side motion for liveliness
+        mesh.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.3) * 0.02;
       }
     }
   });
