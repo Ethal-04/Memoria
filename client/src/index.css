@@ -3,49 +3,68 @@
 @tailwind utilities;
 
 :root {
-      --background: 0 0% 100%;
---foreground: 20 14.3% 4.1%;
---muted: 60 4.8% 95.9%;
---muted-foreground: 25 5.3% 44.7%;
---popover: 0 0% 100%;
---popover-foreground: 20 14.3% 4.1%;
---card: 0 0% 100%;
---card-foreground: 20 14.3% 4.1%;
---border: 20 5.9% 90%;
---input: 20 5.9% 90%;
---primary: 207 90% 54%;
---primary-foreground: 211 100% 99%;
---secondary: 60 4.8% 95.9%;
---secondary-foreground: 24 9.8% 10%;
---accent: 60 4.8% 95.9%;
---accent-foreground: 24 9.8% 10%;
---destructive: 0 84.2% 60.2%;
---destructive-foreground: 60 9.1% 97.8%;
---ring: 20 14.3% 4.1%;
---radius: 0.5rem;
-  }
-  .dark {
-      --background: 240 10% 3.9%;
---foreground: 0 0% 98%;
---muted: 240 3.7% 15.9%;
---muted-foreground: 240 5% 64.9%;
---popover: 240 10% 3.9%;
---popover-foreground: 0 0% 98%;
---card: 240 10% 3.9%;
---card-foreground: 0 0% 98%;
---border: 240 3.7% 15.9%;
---input: 240 3.7% 15.9%;
---primary: 207 90% 54%;
---primary-foreground: 211 100% 99%;
---secondary: 240 3.7% 15.9%;
---secondary-foreground: 0 0% 98%;
---accent: 240 3.7% 15.9%;
---accent-foreground: 0 0% 98%;
---destructive: 0 62.8% 30.6%;
---destructive-foreground: 0 0% 98%;
---ring: 240 4.9% 83.9%;
---radius: 0.5rem;
-  }
+  /* Base colors */
+  --background: 210 38% 98%;
+  --foreground: 215 24% 20%;
+  --muted: 215 16% 92%;
+  --muted-foreground: 215 16% 56%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 215 24% 20%;
+  --card: 0 0% 100%;
+  --card-foreground: 215 24% 20%;
+  --border: 214 15% 88%;
+  --input: 214 15% 88%;
+  
+  /* Brand colors */
+  --lavender: 260 67% 56%;
+  --lavender-dark: 260 67% 46%;
+  --teal: 174 67% 45%;
+  --teal-dark: 174 67% 35%;
+  --blue: 220 70% 56%;
+  --blue-dark: 220 70% 46%;
+  --green: 142 64% 45%;
+  --green-dark: 142 64% 35%;
+  
+  /* UI colors */
+  --primary: 260 67% 56%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 33% 96%;
+  --secondary-foreground: 215 24% 20%;
+  --accent: 174 67% 45%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 260 67% 56%;
+  --radius: 0.5rem;
+  
+  /* Neutral shades */
+  --neutral-lightest: 210 33% 98%;
+  --neutral-light: 214 15% 92%;
+  --neutral-medium: 215 16% 65%;
+  --neutral-dark: 215 24% 27%;
+}
+
+.dark {
+  --background: 215 32% 12%;
+  --foreground: 210 33% 96%;
+  --muted: 215 25% 25%;
+  --muted-foreground: 215 16% 70%;
+  --popover: 215 32% 12%;
+  --popover-foreground: 210 33% 96%;
+  --card: 215 32% 16%;
+  --card-foreground: 210 33% 96%;
+  --border: 215 25% 25%;
+  --input: 215 25% 25%;
+  --primary: 260 67% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 215 25% 25%;
+  --secondary-foreground: 210 33% 96%;
+  --accent: 174 67% 45%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 74% 42%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 260 67% 65%;
+}
 
 @layer base {
   * {
@@ -54,6 +73,40 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+  
+  /* Custom components and background styles */
+  .gradient-bg {
+    @apply bg-gradient-to-r from-[hsl(var(--lavender))] to-[hsl(var(--teal))];
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-[hsl(var(--lavender))] to-[hsl(var(--teal))] bg-clip-text text-transparent;
+  }
+  
+  .shadow-soft {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  
+  .shadow-medium {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+  
+  /* Animation utilities */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-15px);
+    }
+    100% {
+      transform: translateY(0px);
+    }
   }
 }
 
