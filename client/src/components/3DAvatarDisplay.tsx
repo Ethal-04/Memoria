@@ -2,18 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-// Import types for FaceMesh
-type FaceMesh = {
-  setOptions: (options: any) => void;
-  onResults: (callback: (results: any) => void) => void;
-  send: (options: { image: HTMLVideoElement }) => Promise<void>;
-  close: () => void;
-};
-
-type Results = {
-  multiFaceLandmarks?: Array<Array<{x: number, y: number, z: number}>>;
-  image?: CanvasImageSource;
-};
 import { Button } from './ui/button';
 import { CompanionData } from '@/lib/openai';
 
@@ -89,182 +77,78 @@ const ThreeDimensionalAvatar: React.FC<ThreeDimensionalAvatarProps> = ({
   const [threeDEnabled, setThreeDEnabled] = useState(false);
   const [expressions, setExpressions] = useState<Expressions>(defaultExpressions);
   const [currentExpression, setCurrentExpression] = useState<string>('neutral');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Simple animation effect for the 3D avatar
   useEffect(() => {
-    let faceMesh: FaceMesh | null = null;
     let animationId: number | null = null;
-    let videoStream: MediaStream | null = null;
-
-    // Only initialize face tracking if 3D mode is enabled
-    if (threeDEnabled && videoRef.current) {
-      const startFaceTracking = async () => {
-        try {
-          // Access user's camera
-          videoStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480 }
+    
+    // Only start animation if 3D mode is enabled
+    if (threeDEnabled) {
+      // Create an animation loop for subtle movements
+      const animate = () => {
+        // Update expressions occasionally to simulate subtle movements
+        if (Math.random() < 0.05) {
+          // Random slight expressions
+          setExpressions({
+            smile: Math.random() * 0.2,
+            sadness: 0,
+            surprise: Math.random() * 0.1,
+            talking: isActive ? 0.5 : 0
           });
-          
-          if (videoRef.current) {
-            videoRef.current.srcObject = videoStream;
-          }
-
-          // Initialize Face Mesh - using conditional import to avoid run-time errors
-          try {
-            // Using dynamic import to avoid TypeScript issues
-            // In a production app, would use proper import
-            const { FaceMesh } = await import('@mediapipe/face_mesh');
-            faceMesh = new FaceMesh({
-              locateFile: (fileName: string) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${fileName}`;
-              }
-            });
-          } catch (error) {
-            console.error("Failed to load FaceMesh:", error);
-          }
-
-          // Only set options if faceMesh was successfully initialized
-          if (faceMesh) {
-            faceMesh.setOptions({
-              maxNumFaces: 1,
-              refineLandmarks: true,
-              minDetectionConfidence: 0.5,
-              minTrackingConfidence: 0.5
-            });
-
-            faceMesh.onResults(onResults);
-          }
-
-          // Start detection loop
-          if (videoRef.current) {
-            videoRef.current.play();
-            const detectFace = async () => {
-              if (videoRef.current && faceMesh) {
-                await faceMesh.send({ image: videoRef.current });
-              }
-              animationId = requestAnimationFrame(detectFace);
-            };
-            detectFace();
-          }
-        } catch (error) {
-          console.error('Error accessing camera:', error);
         }
+        
+        animationId = requestAnimationFrame(animate);
       };
-
-      startFaceTracking();
+      
+      animate();
     }
-
+    
     // Cleanup function
     return () => {
       if (animationId) {
         cancelAnimationFrame(animationId);
       }
-      if (videoStream) {
-        videoStream.getTracks().forEach(track => track.stop());
-      }
-      if (faceMesh) {
-        faceMesh.close();
-      }
     };
-  }, [threeDEnabled]);
+  }, [threeDEnabled, isActive]);
 
-  // Process face mesh results to update expressions
-  const onResults = (results: Results) => {
-    if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
-    
-    const landmarks = results.multiFaceLandmarks[0];
-    
-    // Extract facial features (simplified version)
-    // In a production app, would use more sophisticated analysis
-    
-    // Check for smile (measure mouth corners elevation)
-    const leftMouthCorner = landmarks[61];
-    const rightMouthCorner = landmarks[291];
-    const upperLip = landmarks[13];
-    
-    const smileValue = ((leftMouthCorner.y < upperLip.y && rightMouthCorner.y < upperLip.y) ? 1 : 0) * 0.8;
-    
-    // Check for raised eyebrows (surprise)
-    const leftEyebrow = landmarks[66];
-    const rightEyebrow = landmarks[296];
-    const foreheadPoint = landmarks[10];
-    
-    const surpriseValue = ((leftEyebrow.y < foreheadPoint.y || rightEyebrow.y < foreheadPoint.y) ? 1 : 0) * 0.7;
-    
-    // Mouth opening detection for talking
-    const upperLipBottom = landmarks[14];
-    const lowerLipTop = landmarks[18];
-    
-    const talkingValue = (Math.abs(upperLipBottom.y - lowerLipTop.y) > 0.05) ? 0.5 : 0;
-    
-    // Simple sadness detection
-    const mouthCenter = landmarks[14];
-    const sideOfMouth = landmarks[78];
-    
-    const sadnessValue = ((mouthCenter.y > sideOfMouth.y) ? 1 : 0) * 0.6;
-    
-    // Set expressions and determine dominant expression
-    setExpressions({
-      smile: smileValue,
-      sadness: sadnessValue,
-      surprise: surpriseValue,
-      talking: talkingValue
-    });
-    
-    // Determine current expression based on highest value
-    let dominant = 'neutral';
-    let maxValue = 0.3; // Threshold
-    
-    if (smileValue > maxValue && smileValue > sadnessValue && smileValue > surpriseValue) {
-      dominant = 'smile';
-      maxValue = smileValue;
-    } else if (sadnessValue > maxValue && sadnessValue > smileValue && sadnessValue > surpriseValue) {
-      dominant = 'sadness';
-      maxValue = sadnessValue;
-    } else if (surpriseValue > maxValue && surpriseValue > smileValue && surpriseValue > sadnessValue) {
-      dominant = 'surprise';
-      maxValue = surpriseValue;
-    }
-    
-    if (talkingValue > 0.2) {
-      dominant += ' talking';
-    }
-    
-    setCurrentExpression(dominant);
-    
-    // Debug visualization
-    if (canvasRef.current) {
-      const ctx = canvasRef.current.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        
-        // Display the video frame
-        if (results.image && videoRef.current) {
-          ctx.drawImage(
-            results.image, 
-            0, 0, 
-            canvasRef.current.width, 
-            canvasRef.current.height
-          );
-        }
-        
-        // Draw face landmarks (for debug)
-        if (landmarks) {
-          ctx.fillStyle = 'white';
-          ctx.strokeStyle = 'white';
-          ctx.lineWidth = 1;
-          
-          for (const landmark of landmarks) {
-            ctx.beginPath();
-            ctx.arc(
-              landmark.x * canvasRef.current.width,
-              landmark.y * canvasRef.current.height,
-              1, 0, 2 * Math.PI
-            );
-            ctx.fill();
-          }
-        }
+  // Update expression based on companion state
+  const updateExpression = (isActive: boolean) => {
+    // Set a basic expression based on if the companion is "talking"
+    if (isActive) {
+      setExpressions({
+        smile: 0.2,
+        sadness: 0,
+        surprise: 0,
+        talking: 0.5
+      });
+      setCurrentExpression('talking');
+    } else {
+      // Default neutral expression with occasional subtle movements
+      const randomExpression = Math.random();
+      if (randomExpression > 0.7) {
+        setExpressions({
+          smile: 0.3,
+          sadness: 0,
+          surprise: 0,
+          talking: 0
+        });
+        setCurrentExpression('smile');
+      } else if (randomExpression > 0.4) {
+        setExpressions({
+          smile: 0,
+          sadness: 0,
+          surprise: 0.2,
+          talking: 0
+        });
+        setCurrentExpression('neutral');
+      } else {
+        setExpressions({
+          smile: 0.1,
+          sadness: 0,
+          surprise: 0,
+          talking: 0
+        });
+        setCurrentExpression('neutral');
       }
     }
   };
@@ -321,21 +205,7 @@ const ThreeDimensionalAvatar: React.FC<ThreeDimensionalAvatarProps> = ({
         {threeDEnabled ? '2D View' : '3D View'}
       </Button>
       
-      {/* Hidden video element for face tracking */}
-      <video 
-        ref={videoRef}
-        style={{ display: 'none' }}
-        width="640"
-        height="480"
-      />
-      
-      {/* Debug canvas - can be hidden in production */}
-      <canvas 
-        ref={canvasRef}
-        width="640"
-        height="480"
-        style={{ display: 'none' }}
-      />
+      {/* No video or canvas elements needed since we're not doing camera tracking */}
     </div>
   );
 };
