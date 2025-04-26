@@ -10,6 +10,11 @@ import {
   type InsertConversation,
   type Message
 } from "@shared/schema";
+import session from "express-session";
+import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { db, pool } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -34,8 +39,8 @@ export interface IStorage {
   sessionStore: any;
 }
 
-import createMemoryStore from "memorystore";
 const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export class MemStorage implements IStorage {
   sessionStore: any;
@@ -71,7 +76,7 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userId++;
-    const user: User = { ...insertUser, id };
+    const user = { ...insertUser, id } as User;
     this.users.set(id, user);
     return user;
   }
@@ -89,7 +94,7 @@ export class MemStorage implements IStorage {
 
   async createCompanion(insertCompanion: InsertCompanion): Promise<Companion> {
     const id = this.companionId++;
-    const companion: Companion = { ...insertCompanion, id };
+    const companion = { ...insertCompanion, id } as Companion;
     this.companions.set(id, companion);
     return companion;
   }
@@ -98,7 +103,7 @@ export class MemStorage implements IStorage {
     const companion = this.companions.get(id);
     if (!companion) return undefined;
     
-    const updatedCompanion: Companion = { ...companion, ...data };
+    const updatedCompanion = { ...companion, ...data } as Companion;
     this.companions.set(id, updatedCompanion);
     return updatedCompanion;
   }
@@ -120,7 +125,7 @@ export class MemStorage implements IStorage {
 
   async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
     const id = this.conversationId++;
-    const conversation: Conversation = { ...insertConversation, id };
+    const conversation = { ...insertConversation, id } as Conversation;
     this.conversations.set(id, conversation);
     return conversation;
   }
@@ -129,25 +134,18 @@ export class MemStorage implements IStorage {
     const conversation = this.conversations.get(id);
     if (!conversation) return undefined;
     
-    const updatedConversation: Conversation = { 
+    const updatedConversation = { 
       ...conversation, 
       messages, 
       updatedAt: new Date().toISOString() 
-    };
+    } as Conversation;
     this.conversations.set(id, updatedConversation);
     return updatedConversation;
   }
 }
 
-import session from "express-session";
-import connectPg from "connect-pg-simple";
-import { db, pool } from "./db";
-import { eq } from "drizzle-orm";
-
-const PostgresSessionStore = connectPg(session);
-
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any;
   
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 
