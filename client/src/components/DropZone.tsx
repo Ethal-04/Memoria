@@ -28,11 +28,11 @@ const DropZone: React.FC<DropZoneProps> = ({ onFileSelected, isUploading, select
       return;
     }
     
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validate file size (50MB max)
+    if (file.size > 50 * 1024 * 1024) {
       toast({
         title: "File too large",
-        description: "Please upload an image smaller than 10MB",
+        description: "Please upload an image smaller than 50MB",
         variant: "destructive",
       });
       return;
@@ -129,7 +129,7 @@ const DropZone: React.FC<DropZoneProps> = ({ onFileSelected, isUploading, select
         disabled={isUploading}
       />
       
-      <p className="mt-4 text-sm text-neutral-medium">Supports JPG, PNG • Max file size 10MB</p>
+      <p className="mt-4 text-sm text-neutral-medium">Supports JPG, PNG • Max file size 50MB</p>
     </div>
   );
 };
