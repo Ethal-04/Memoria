@@ -134,7 +134,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ companionId, companionDat
                 {displayMessages.map((msg: MessageData) => (
                   <div 
                     key={msg.id}
-                    className={`flex items-start max-w-md ${msg.role === 'user' ? 'ml-auto' : ''}`}
+                    className={`message flex items-start max-w-md ${msg.role === 'user' ? 'ml-auto' : ''}`}
+                    data-role={msg.role}
+                    data-timestamp={msg.timestamp}
                   >
                     {msg.role === 'assistant' && (
                       <div className="w-8 h-8 rounded-full overflow-hidden mr-3 mt-1">

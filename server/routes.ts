@@ -157,23 +157,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const newMessages = [...conversation.messages, userMessage];
       
-      // Format messages for OpenAI API
-      const aiMessages = newMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-      
-      // Get response from OpenAI
-      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: aiMessages,
-        temperature: 0.7,
-        max_tokens: 300
-      });
-      
-      // Add AI response to conversation
-      const aiResponse = completion.choices[0].message.content || "I'm not sure how to respond to that.";
+      let aiResponse = "";
+      try {
+        // Format messages for OpenAI API
+        const aiMessages = newMessages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
+        
+        // Get response from OpenAI
+        // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: aiMessages,
+          temperature: 0.7,
+          max_tokens: 300
+        });
+        
+        // Extract AI response
+        aiResponse = completion.choices[0].message.content || "I'm not sure how to respond to that.";
+      } catch (apiError) {
+        console.error("OpenAI API error:", apiError);
+        
+        // Fallback response based on personality type
+        const personalityResponses = {
+          warm: "I'm so happy to connect with you. I'm here to provide comfort and support. How are you feeling today?",
+          reflective: "That's an interesting thought. It makes me reflect on the moments we've shared together. Would you like to explore this topic more deeply?",
+          balanced: "Thank you for sharing that with me. I appreciate our conversation. Is there anything specific you'd like to discuss today?",
+          humorous: "Well, that puts a smile on my face! Life is better with a bit of laughter, don't you think? What else would make you smile today?",
+          wise: "That's a thought-provoking point. Sometimes the most meaningful insights come from our everyday experiences. What led you to this reflection?"
+        };
+        
+        // Get personality type from companion or default to balanced
+        const personalityType = companion.personality || "balanced";
+        aiResponse = personalityResponses[personalityType as keyof typeof personalityResponses] || 
+          "I'm here to listen and connect with you. Let's continue our conversation.";
+      }
       
       const assistantMessage: Message = {
         id: nanoid(),

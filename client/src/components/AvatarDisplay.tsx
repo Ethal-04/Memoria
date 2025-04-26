@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CompanionData } from "@/lib/openai";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ThreeDimensionalAvatar from "./3DAvatarDisplay";
 
 interface AvatarDisplayProps {
   companion: CompanionData;
@@ -29,6 +30,29 @@ const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
 }) => {
   const [showSettings, setShowSettings] = useState(false);
   
+  const [isActive, setIsActive] = useState(false);
+
+  // This would be set to true when the companion is speaking 
+  // to activate facial expressions
+  useEffect(() => {
+    // This is a placeholder for real message activity
+    // In a real implementation, we'd detect when new messages arrive
+    const checkMessageInterval = setInterval(() => {
+      const lastMessage = document.querySelector('.message:last-child');
+      if (lastMessage?.getAttribute('data-role') === 'assistant') {
+        const timestamp = lastMessage?.getAttribute('data-timestamp');
+        if (timestamp) {
+          const messageTime = new Date(timestamp).getTime();
+          const now = new Date().getTime();
+          // If the message is less than 3 seconds old, consider the avatar active
+          setIsActive(now - messageTime < 3000);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(checkMessageInterval);
+  }, []);
+
   return (
     <div className="w-full md:w-1/3 bg-gradient-to-b from-lavender/20 to-teal/20 p-6 flex flex-col">
       <div className="bg-white rounded-xl shadow-soft p-4 mb-6">
@@ -36,10 +60,9 @@ const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
         <p className="text-sm text-neutral-medium mb-4">Crafted with care and respect</p>
         
         <div className="aspect-square rounded-xl overflow-hidden mb-4 bg-neutral-light">
-          <img 
-            src={companion.avatarUrl} 
-            alt={`${companion.name} avatar`} 
-            className="w-full h-full object-cover" 
+          <ThreeDimensionalAvatar 
+            companion={companion}
+            isActive={isActive}
           />
         </div>
         
